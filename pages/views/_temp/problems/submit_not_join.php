@@ -1,0 +1,1 @@
+<div class="alerts alert-info">You must join the contest first. <a href="<?php echo $contest->link ?>">Back to contest home</a></div>

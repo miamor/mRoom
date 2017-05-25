@@ -1,0 +1,215 @@
+<? 
+session_start();
+error_reporting(E_ERROR | E_PARSE);
+include 'func.php';
+
+$type = isset($_GET['type']) ? $_GET['type'] : null;
+
+$tokensAr = Array
+(
+    'datatypes' => 'ATOM BOOL BOOLEAN BYTE CHAR COLORREF DWORD DWORDLONG DWORD_PTR DWORD32 DWORD64 FLOAT HACCEL HALF_PTR HANDLE HBITMAP HBRUSH HCOLORSPACE HCONV HCONVLIST HCURSOR HDC HDDEDATA HDESK HDROP HDWP HENHMETAFILE HFILE HFONT HGDIOBJ HGLOBAL HHOOK HICON HINSTANCE HKEY HKL HLOCAL HMENU HMETAFILE HMODULE HMONITOR HPALETTE HPEN HRESULT HRGN HRSRC HSZ HWINSTA HWND INT INT_PTR INT32 INT64 LANGID LCID LCTYPE LGRPID LONG LONGLONG LONG_PTR LONG32 LONG64 LPARAM LPBOOL LPBYTE LPCOLORREF LPCSTR LPCTSTR LPCVOID LPCWSTR LPDWORD LPHANDLE LPINT LPLONG LPSTR LPTSTR LPVOID LPWORD LPWSTR LRESULT PBOOL PBOOLEAN PBYTE PCHAR PCSTR PCTSTR PCWSTR PDWORDLONG PDWORD_PTR PDWORD32 PDWORD64 PFLOAT PHALF_PTR PHANDLE PHKEY PINT PINT_PTR PINT32 PINT64 PLCID PLONG PLONGLONG PLONG_PTR PLONG32 PLONG64 POINTER_32 POINTER_64 PSHORT PSIZE_T PSSIZE_T PSTR PTBYTE PTCHAR PTSTR PUCHAR PUHALF_PTR PUINT PUINT_PTR PUINT32 PUINT64 PULONG PULONGLONG PULONG_PTR PULONG32 PULONG64 PUSHORT PVOID PWCHAR PWORD PWSTR SC_HANDLE SC_LOCK SERVICE_STATUS_HANDLE SHORT SIZE_T SSIZE_T TBYTE TCHAR UCHAR UHALF_PTR UINT UINT_PTR UINT32 UINT64 ULONG ULONGLONG ULONG_PTR ULONG32 ULONG64 USHORT USN VOID WCHAR WORD WPARAM WPARAM WPARAM',
+    'types' => 'char bool short int __int32 __int64 __int8 __int16 long float double __wchar_t clock_t _complex _dev_t _diskfree_t div_t ldiv_t _exception _EXCEPTION_POINTERS FILE _finddata_t _finddatai64_t _wfinddata_t _wfinddatai64_t __finddata64_t __wfinddata64_t _FPIEEE_RECORD fpos_t _HEAPINFO _HFILE lconv intptr_t jmp_buf mbstate_t _off_t _onexit_t _PNH ptrdiff_t _purecall_handler sig_atomic_t size_t _stat __stat64 _stati64 terminate_function time_t __time64_t _timeb __timeb64 tm uintptr_t _utimbuf va_list wchar_t wctrans_t wctype_t wint_t signed',
+    'keywords' => 'break case catch class const __finally __exception __try const_cast continue private public protected __declspec default delete deprecated dllexport dllimport do dynamic_cast else enum explicit extern if for friend goto inline mutable naked namespace new noinline noreturn nothrow register reinterpret_cast return selectany sizeof static static_cast struct switch template this thread throw true false try typedef typeid typename union using uuid virtual void volatile whcar_t while stdin',
+    'functions' => 'assert isalnum isalpha iscntrl isdigit isgraph islower isprintispunct isspace isupper isxdigit tolower toupper errno localeconv setlocale acos asin atan atan2 ceil cos cosh exp fabs floor fmod frexp ldexp log log10 modf pow sin sinh sqrt tan tanh jmp_buf longjmp setjmp raise signal sig_atomic_t va_arg va_end va_start clearerr fclose feof ferror fflush fgetc fgetpos fgets fopen fprintf fputc fputs fread freopen fscanf fseek fsetpos ftell fwrite getchar getch getc main gets perror printf putc putchar puts remove cout cin rename rewind scanf setbuf setvbuf sprintf sscanf tmpfile tmpnam ungetc vfprintf vprintf vsprintf abort abs atexit atof atoi atol bsearch calloc div exit free getenv labs ldiv malloc mblen mbstowcs mbtowc qsort rand realloc srand strtod strtol strtoul system wcstombs wctomb memchr memcmp memcpy memmove memset strcat strchr strcmp strcoll strcpy strcspn strerror strlen strncat strncmp strncpy strpbrk strrchr strspn strstr strtok strxfrm asctime clock ctime difftime gmtime localtime mktime strftime time',
+    'pattern' => '\{ \} \# \( \) \, \; \" \' \& \< \>',
+    'math' => '\+ \- \* \/ \=== \!== \== \!= \= % \< \>',
+    'more' => 'var func'
+);
+$hashTokensAr = hash_token($tokensAr);
+
+if ($type == 'ml') {
+	$compareAr = array(
+		array(1, 2)
+	);
+} else {
+	$compareAr = array(
+		array(1, 3, true),
+		array(1, 4, true),
+		array(2, 4, true),
+		array(1, 5),
+		array(1, 6),
+		array(4, 7),
+		array(3, 5),
+		array(3, 6),
+		array(5, 6, true),
+		array(6, 7, true)
+	);
+}
+
+if (isset($_GET['do']) && $_GET['do'] == 'compare') {
+	if ($type == 'ml') {
+		$eg = false;
+		$txtAr[1] = html_entity_decode($_POST['cont1']);
+		$txtAr[2] = html_entity_decode($_POST['cont2']);
+		echo '<h2>Result</h2>';
+		showDetectionML($txt);
+	} else {
+		$pairID = $_GET['p'];
+		$pair = $compareAr[$pairID];
+		showDetection($compareAr, $pair, true);
+	}
+} else {
+	$eg = true;
+	for ($i = 1; $i <= 7; $i++) {
+		$txtAr[$i] = file_get_contents('data/'.$i.'.format.cpp');
+/*		// train part
+		$doc = $i;
+		$dAr = showDetectionML($txtAr[$doc], $doc);
+		print_r($dAr);
+*/	}
+	if (isset($_GET['d'])) {
+		$doc = $_GET['d'];
+		$dAr = showDetectionML($txtAr[$doc], $doc);
+		print_r($dAr);
+	} else {
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="shortcut icon" type="image/x-icon" href="assets/dist/img/favicon.ico" />
+	<title>Simple C++ Plagiarism Detection</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/font-awesome.min.css">
+	<link rel="stylesheet" href="css/samples.css">
+	<script type="text/javascript" src="js/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="page-head">
+	<h1>Simple tests</h1>
+</div>
+
+
+<div class="intro">
+
+<div class="howitworks">
+<h3>How it works</h3>
+<ol>
+	<li>Beautify the code, remove libraries included.</li>
+	<li>Format code.
+		<ol class="note">
+			<li>Rename similar tokens</li>
+			<li>Rewrite printf-cout / scanf-cin,...</li>
+		</ol>
+		<div class="eg"><b>Eg</b>: 
+			<ul>
+				<li>(var) <b>token1</b> -> <b>a</b>, (var) <b>token2</b> -> <b>b</b>, (function) <b>func1</b> -> <b>a_15</b>, (function) <b>func2</b> -> <b>b_93</b>,...</li>
+				<li><b>float a, b</b> -> <b>float a; float b</b></li>
+				<li><b>printf / scanf</b> -> <b>cout / cin</b></li>
+				<li><b>do {} while ()</b> -> <b>while {}</b></li>
+			</ul>
+		</div>
+	</li>
+	<li>Convert content to tokens.<br/>
+		<b>Eg</b>: Given <code>int main () { return 0; }</code><br/>
+		We will divide it into string of tokens, not characters.<br/>
+		For example, The sequence of 4-grams derived from the content given will be something like <br/>
+		<code>intmain()</code> <code>main(){</code> <code>(){return</code> <code>return0;}</code><br/>
+		but not <code>intm</code> <code>main</code> <code>ain(</code>...
+	</li>
+	<li>Remove unnecessary tokens.<br/>
+		<div class="eg"><b>Eg</b>: (brackets) {}...</div>
+		<div class="note">Remove brackets so that <b>if {<i>[OneLineCode]</i>}</b> and <b>if <i>[OneLineCode]</i></b> will be catched.</div>
+	</li>
+	<li>Get fingerprints.<br/>
+		By getting the minimum value of each group of k-value.
+	</li>
+</ol></div>
+
+<div class="problems">
+<h3>Problems remain</h3>
+<ol>
+	<li>For / while</li>
+	<li>Change variables order</li>
+	<li>...</li>
+</ol>
+</div>
+
+
+<div class="large-data">
+<h3>What to do with large dataset?</h3>
+Obviously we cannot analyze one-by-one thousands of code files.
+</div>
+
+</div>
+
+<div class="test">
+	<h2>Test</h2>
+	<form class="submit" method="post" action="?do=compare">
+		<div class="col-lg-6 no-padding-left">
+			<h4>Code content #1</h4>
+			<textarea name="cont1" style="height:100px" class="form-control"></textarea>
+		</div>
+		<div class="col-lg-6 no-padding-right">
+			<h4>Code content #2</h4>
+			<textarea name="cont2" style="height:100px" class="form-control"></textarea>
+		</div>
+		<div class="clearfix"></div>
+		<div class="btn-groups center" style="margin-top:10px">
+			<input type="reset" class="btn btn-default" value="Reset"/>
+			<input type="submit" class="btn btn-success" value="Submit"/>
+		</div>
+	</form>
+
+	<div id="result-input"></div>
+</div>
+
+<div class="examples">
+	<h1>Examples</h1>
+	<blockquote>
+		<ol>
+			<li>4-gram</li>
+			<li>Winnow w = 4</li>
+			<li>Select minimum value as fingerprint</li>
+		</ol>
+	</blockquote>
+	<div id="toc" class="col-lg-2 anchorList no-padding-left">
+		<div class="choose-pair">
+			<? /*for ($i = 1; $i <= 7; $i++) {
+				for ($j = $i+1; $j <= 7; $j++) {
+					$key = $i.$j;
+					$sb = $compareAr[$i.$j][2] ? '<span class="text-success">true</span>' : '<span class="text-danger">false</span>';
+					echo '<div class="pair-choose-one anchorLink"><a href="#result-eg" data-p="'.$i.$j.'">'.$i.' - '.$j.' (Should be '.$sb.')</a></div>';
+				}
+			}*/
+			foreach ($compareAr as $pairID => $pair) {
+				$key = $pair[0].' - '.$pair[1];
+				$sb = $pair[2] ? '<span class="text-success">true</span>' : '<span class="text-danger">false</span>';
+				echo '<div class="pair-choose-one anchorLink"><a href="#result-eg" data-p="'.$pairID.'">'.$key.' (Should be '.$sb.')</a></div>';
+			} ?>
+		</div>
+	</div>
+	<div class="col-lg-10 no-padding">
+		<div class="alert alert-info">Given some code, select one pair to compare.</div>
+		<? for ($i = 1; $i <= 7; $i++) { ?>
+			<div class="col-lg-4 no-padding-left code-content-<? echo $i ?>">
+				<h3 class="ppd" id="p<? echo $i ?>"><i>p<? echo $i ?></i></h3>
+				<pre class="code" style="height:170px"><? echo $txtAr[$i] ?></pre>
+			</div>
+		<? } ?>
+	</div>
+	<div class="clearfix"></div>
+	
+	<div id="result-eg"></div>
+	<div class="clearfix"></div>
+</div>
+
+
+
+<div class="page-foot">
+	Footer
+</div>
+
+	<script src="js/beautify.js"></script>
+	<script src="js/samples.js"></script>
+
+</body>
+</html>
+
+<? 	}
+}

@@ -1,0 +1,2 @@
+<?php
+$contest->outTest();
