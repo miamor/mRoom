@@ -9,7 +9,6 @@
 
 class Plagiarism extends Config {
 	private $hashTokenAr;
-	private $detectPer = 75;
 	private $tokens_CPP = Array (
     'datatypes' => 'ATOM BOOL BOOLEAN BYTE CHAR COLORREF DWORD DWORDLONG DWORD_PTR DWORD32 DWORD64 FLOAT HACCEL HALF_PTR HANDLE HBITMAP HBRUSH HCOLORSPACE HCONV HCONVLIST HCURSOR HDC HDDEDATA HDESK HDROP HDWP HENHMETAFILE HFILE HFONT HGDIOBJ HGLOBAL HHOOK HICON HINSTANCE HKEY HKL HLOCAL HMENU HMETAFILE HMODULE HMONITOR HPALETTE HPEN HRESULT HRGN HRSRC HSZ HWINSTA HWND INT INT_PTR INT32 INT64 LANGID LCID LCTYPE LGRPID LONG LONGLONG LONG_PTR LONG32 LONG64 LPARAM LPBOOL LPBYTE LPCOLORREF LPCSTR LPCTSTR LPCVOID LPCWSTR LPDWORD LPHANDLE LPINT LPLONG LPSTR LPTSTR LPVOID LPWORD LPWSTR LRESULT PBOOL PBOOLEAN PBYTE PCHAR PCSTR PCTSTR PCWSTR PDWORDLONG PDWORD_PTR PDWORD32 PDWORD64 PFLOAT PHALF_PTR PHANDLE PHKEY PINT PINT_PTR PINT32 PINT64 PLCID PLONG PLONGLONG PLONG_PTR PLONG32 PLONG64 POINTER_32 POINTER_64 PSHORT PSIZE_T PSSIZE_T PSTR PTBYTE PTCHAR PTSTR PUCHAR PUHALF_PTR PUINT PUINT_PTR PUINT32 PUINT64 PULONG PULONGLONG PULONG_PTR PULONG32 PULONG64 PUSHORT PVOID PWCHAR PWORD PWSTR SC_HANDLE SC_LOCK SERVICE_STATUS_HANDLE SHORT SIZE_T SSIZE_T TBYTE TCHAR UCHAR UHALF_PTR UINT UINT_PTR UINT32 UINT64 ULONG ULONGLONG ULONG_PTR ULONG32 ULONG64 USHORT USN VOID WCHAR WORD WPARAM WPARAM WPARAM',
     'types' => 'char bool short int __int32 __int64 __int8 __int16 long float double __wchar_t clock_t _complex _dev_t _diskfree_t div_t ldiv_t _exception _EXCEPTION_POINTERS FILE _finddata_t _finddatai64_t _wfinddata_t _wfinddatai64_t __finddata64_t __wfinddata64_t _FPIEEE_RECORD fpos_t _HEAPINFO _HFILE lconv intptr_t jmp_buf mbstate_t _off_t _onexit_t _PNH ptrdiff_t _purecall_handler sig_atomic_t size_t _stat __stat64 _stati64 terminate_function time_t __time64_t _timeb __timeb64 tm uintptr_t _utimbuf va_list wchar_t wctrans_t wctype_t wint_t signed',
@@ -141,7 +140,7 @@ class Plagiarism extends Config {
 						$similar = $this->_array_intersect($_FPS, $FPS);
 						$perSi = round(count($similar)/count($_FPS)*100, 2);
 						$perSi2 = round(count($similar)/count($FPS)*100, 2);
-						if ($perSi < $this->detectPer || $perSi2 < $this->detectPer) unset($files[$fk]);
+						if ($perSi < 70 || $perSi2 < 70) unset($files[$fk]);
 						else {
 					/*		echo $_hA['original'].' ~~~~ '.$hA['original'].' ========== ';
 							echo $_hA['format'].' ~~~~ '.$hA['format'].' ========== ';
@@ -240,7 +239,7 @@ class Plagiarism extends Config {
 		$similar = $this->_array_intersect($FPSar[0], $FPSar[1]);
 		$perSi = round(count($similar)/count($FPSar[0])*100, 2);
 		$perSi2 = round(count($similar)/count($FPSar[1])*100, 2);
-		if ($perSi > $this->detectPer && $perSi2 > $this->detectPer) $detected = 'detected';
+		if ($perSi > 70 && $perSi2 > 70) $detected = 'detected';
 		else $detected = 'safe';
 		$perSi = ($perSi > $perSi2) ? $perSi : $perSi2;
 		echo '<div class="similarity"><h4>Similarity</h4>
@@ -287,23 +286,17 @@ class Plagiarism extends Config {
 			$length = count($_ar);
 			$str = '';
 			$wn = 0;
-		for ($i = 0; $i < $length-1; $i++) {
-			$strp = $_ar[$i];
-			$strn = $_ar[$i+1];
-			$str = $strp.$strn;
-			$Chars[] = $str;
-			$intT = $this->get_hash_of_token($strp)+$this->get_hash_of_token($strn);
-			$Fps[] = $intT;
-		}
-/*			if ($length > $token) {
-				for ($i = 0; $i < $length-1; $i++) {
+	//		$fps[$line][$wn] = 0; // Set default value for this winnow
+			if ($length > $token) {
+/*				for ($i = 0; $i < $length - $token + 1; $i++) {
+					$str = implode('', array_slice($_ar, $i, $token));
+*/				for ($i = 0; $i < $length-1; $i++) {
+					//$intT = ord($str);
 					$strp = $_ar[$i];
 					$strn = $_ar[$i+1];
 					$str = $strp.$strn;
+					//echo $str.'~~~~~~~';
 					$intT = $this->get_hash_of_token($strp)+$this->get_hash_of_token($strn);
-
-					$Chars[] = $str;
-					$Fps[] = $intT;
 
 					// Save minimum value of this group to fingerprint array
 					if (!isset($fps[$line][$wn])) $fps[$line][$wn] = $intT; // set if value is not set
@@ -312,7 +305,7 @@ class Plagiarism extends Config {
 					}
 
 					$H[$line][$wn][] = $intT;
-					// Save char to create table, not neccessary 
+					/* Save char to create table, not neccessary */
 					$C[$line][$wn][] = $str;
 					
 					if (($i+1)%$w == 0) {
@@ -322,20 +315,13 @@ class Plagiarism extends Config {
 				}
 			} else {
 				if ($length == 1) {
-					if (!preg_match('/\d|\s/', $str)) {
-						$str = $_ar[0];
-						$intT = $this->get_hash_of_token($str);
-					}
+					if (!preg_match('/\d|\s/', $str)) $str = $_ar[0];
 				} else {
-					for ($i = 0; $i < $length; $i++) {
+					for ($i = 0; $i < $length; $i++)
 						$str .= $_ar[$i];
-						$intT += $this->get_hash_of_token($str);
-					}
 				}
-				$Chars[] = $str;
-				$Fps[] = $intT;
 
-//				$intT = ord($str);
+				$intT = ord($str);
 
 				// Save minimum value of this group to fingerprint array
 				if (!isset($fps[$line][$wn])) $fps[$line][$wn] = $intT; // set if value is not set
@@ -344,47 +330,18 @@ class Plagiarism extends Config {
 				}
 
 				$H[$line][$wn][] = $intT;
-				// Save char to create table, not neccessary
+				/* Save char to create table, not neccessary */
 				$C[$line][$wn][] = $str;
 				
 				$wn++;
 			}
 			$FPS = array_merge($FPS, array_values(array_filter($fps[$line])) );
-*/
-			$_fps = $FpsWi = array();
-			$wi = 0;
-			for ($i = 0; $i < $length; $i+=2) {
-				if ($Chars[$i+2]) {
-					$CharsWi[$wi] = array($Chars[$i], $Chars[$i+1], $Chars[$i+2], $Chars[$i+3]);
-					$FpsWi[$wi] = array($Fps[$i], $Fps[$i+1], $Fps[$i+2], $Fps[$i+3]);
-					$wi++;
-				} else if ($Chars[$i+1]) {
-					$CharsWi[$wi] = array($Chars[$i], $Chars[$i+1], $Chars[$i+2], $Chars[$i+3]);
-					$FpsWi[$wi] = array($Fps[$i], $Fps[$i+1], $Fps[$i+2], $Fps[$i+3]);
-				}
-			}
-		
-		foreach ($FpsWi as $_wi => $fpsPerLine) {
-			$min = 100000000;
-			foreach ($fpsPerLine as $_i => $fpsO) {
-				if (($i+1)%4 != 0) {
-					if ($fpsO > 0 && $fpsO < $min) {
-						$min = $fpsO;
-						$FPS[$_wi] = $fpsO;
-					}
-				}
-				if ($fpsO > 0) $FPS[$_wi] = $fpsO;
-				if (($i+1)%4 == 0) {
-					$wi++; 
-					$min = 0;
-				}
-			}
-		}
-//			print_r($FpsWi);
-//			print_r($FPS);
-		
+//		} // end foreach $_Ar
+
 		$A['winnow']['hash'] = $H;
 		$A['winnow']['char'] = $C;
+	//	$A['all']['hash'] = $h;
+	//	$A['all']['char'] = $c;
 		$A['fingerprint'] = $FPS;
 		return $A;
 	}

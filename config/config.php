@@ -13,17 +13,20 @@ define('IMG', ASSETS.'/dist/img');
 define('PLUGINS', ASSETS.'/plugins');
 define('GG_API_KEY', 'AIzaSyA5xbqBF1tGx96z6-QLhGGmvqIQ5LUrt4s');
 define('GG_CX_ID', '014962602028620469778:yf4br-mf6mk');
-/*define('EXEC_PATH_C_CPP', 'I:\Dev-Cpp\MinGW64\bin/');
-define('EXEC_PATH_JAVA', 'I:\Java\jdk1.8.0_91\bin/');
-define('EXEC_PATH_PYTHON', 'I:\Python2.7.12/');
-*/
-define('EXEC_PATH_C_CPP', '');
-define('EXEC_PATH_JAVA', '');
-define('EXEC_PATH_PYTHON', '');
 
 $__page = str_replace($__pattern.'/', '', $_SERVER['REQUEST_URI']);
 define('__HOST', 'ubuntu');
 //define('__HOST', 'window');
+
+if (__HOST == 'windows') {
+	define('EXEC_PATH_C_CPP', 'I:\Dev-Cpp\MinGW64\bin/');
+	define('EXEC_PATH_JAVA', 'I:\Java\jdk1.8.0_91\bin/');
+	define('EXEC_PATH_PYTHON', 'I:\Python2.7.12/');
+} else if (__HOST == 'ubuntu') {
+	define('EXEC_PATH_C_CPP', '');
+	define('EXEC_PATH_JAVA', '');
+	define('EXEC_PATH_PYTHON', '');
+}
 
 class Config {
 

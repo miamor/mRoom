@@ -7,7 +7,7 @@
 		return ($var !== NULL && $var !== FALSE && $var !== '');
 	}
 
-class Plagiarism extends Config {
+class Plagiarism {
 	private $hashTokenAr;
 	private $detectPer = 75;
 	private $tokens_CPP = Array (
@@ -42,180 +42,42 @@ class Plagiarism extends Config {
 		return false;
 	}
 
-	public function checkOnline () {
-		$checkInternet = checkInternet();
-		if ($checkInternet) {
-			$cx = GG_CX_ID;
-			$key = GG_API_KEY;
-			
-			$file = $this->_fileFormat;
-
-			$handl = fopen($file, "r");
-			if ($handl) {
-				while (($line = fgets($handl)) !== false) {
-					$buffer = trim(strip_comments($line));
-//					echo $line.'~~'.$file;
-					if (!preg_match('/((^#)|(^#.*?\n)|include|return 0|(else {$)|(}$)|^{$|(int main)|getch|if|using)/', $buffer)) {
-						$ggsearch = ggsearch($buffer, GG_CX_ID);
-						$checkOnline = json_decode($ggsearch, true);
-//						echo $buffer.'~~~~~~';
-//						print_r($checkOnline);
-						$checkOnline['status'] = 'success';
-						$this->checkOnline = $checkOnline;
-						break;
-					}
-				}
-				fclose($handl);
-			}
-
-			return ($ggsearch);
-		} 
-		return $this->checkOnline = array('status' => 'error', 'content' => 'No internet connection.');
-	}
-
-	function isSubmit ($file) {
-		$query = "SELECT
-					id
-				FROM
-					submissions
-				WHERE 
-					file = ?
-				LIMIT 0,1";
-		$stmt = $this->conn->prepare($query);
-		$stmt->bindParam(1, $file);
-		$stmt->execute();
-		return $stmt->rowCount();
-	}
-	
-	public function checkLocal () {
-		$_dir = $this->_dir;
-		$_fileFormat = $this->_fileFormat;
-		$_fileC = $this->_file;
-		$_ext = end(explode('.', $_fileFormat));
-		
-	// only accepts c_cpp file
-	$allowExt = array('cpp', 'c');
-	if (in_array($_ext, $allowExt)) {
-		$_Ar = array();
-		$_content = file_get_contents($_fileC);
-//		echo $_fileC.'~'.$_content;
-
-		$_hA = $this->make($_content, 'cpp', 4, 4);
-		$_FPS = $_hA['fingerprint'];
-//		print_r($_hA);
-
-		if (is_dir($this->_dir)) {
-			$files = scandir($this->_dir);
-			foreach ($files as $fk => $fi) {
-				$file = $_dir.'/'.$fi;
-				$fiAr = explode('.', $fi);
-				$ext = end($fiAr);
-				$fiU = explode('u', $fiAr[0])[1];
-				$original_file = "{$_dir}/u{$fiU}/{$ext}/{$fiAr[1]}.{$ext}";
-
-//				if (!is_file($file) || $file == $_fileFormat || $ext != $_ext || strpos($fi, 'time') == true || mb_substr($fi, 0, 2) == 'ut' ) { // not check file submitted from the contest
-				if (!is_file($file) || $file == $_fileFormat || !in_array($ext, $allowExt) || check($fi, 'time')) { // check file submitted from the contest
-					unset($files[$fk]);
-				}
-				// check if file is submitted
-				else if (!$this->isSubmit($original_file)) {
-					unset($files[$fk]);
-				}
-				else {
-					$u = explode('/', explode('u', $_fileC)[1])[0];
-				//	if (check($u, 't')) $u = explode('t', $u)[1];
-					$fu = explode('u', explode('.', $fi)[0])[1];
-					/*preg_match('/\/u(.*?)\/'.$_ext.'/', $_fileC, $match);
-					$u = $match[1];*/
-
-					if (!$fu || $fu == $u) unset($files[$fk]);
-					else {
-						$fiext = end(explode('.', $fi));
-						$diff = $sAr = array();
-						$fileC = $_dir."/u$fu/$ext/".explode('.', $fi)[1].".$ext";
-//						$fileC = $original_file;
-						$content = file_get_contents($fileC);
-						$hA = $this->make($content, 'cpp', 4, 4);
-						$FPS = $hA['fingerprint'];
-
-						$similar = $this->_array_intersect($_FPS, $FPS);
-						$perSi = round(count($similar)/count($_FPS)*100, 2);
-						$perSi2 = round(count($similar)/count($FPS)*100, 2);
-						if ($perSi < $this->detectPer || $perSi2 < $this->detectPer) unset($files[$fk]);
-						else {
-					/*		echo $_hA['original'].' ~~~~ '.$hA['original'].' ========== ';
-							echo $_hA['format'].' ~~~~ '.$hA['format'].' ========== ';
-							print_r($_FPS);
-							print_r($FPS);
-							print_r($similar);
-							echo $_fileC.' ~ '. $fileC.' ========== ';
-							echo $perSi.' ~ '. $perSi2.' ========== ';
-					*/		$perSi = ($perSi > $perSi2) ? $perSi : $perSi2;
-							$ufid = preg_replace('/u(.*?)\.(.*)/', "$1", $fi);
-							$isTeam = check($ufid, 't');
-							if ($isTeam) { // is team
-								$ufid = explode('t', $ufid)[1];
-								$ufin = $this->getTeamInfo($ufid);
-							} else {
-								$ufin = $this->getUserInfo($ufid);
-							}
-							$files[$fk] = array('file' => $fi, 'u' => $ufid, 'uname' => $ufin['name'], 'isTeam' => $isTeam, 'ext' => $fiext, 'per' => $perSi, 'sAr' => $similar, 'p1' => htmlentities(file_get_contents($_fileC)), 'p2' => htmlentities(file_get_contents($fileC)));
-							$_Ar['simi'][] = $fi.'::'.$perSi;
-						}
-					}
-				}
-			}
-			$_Ar['similar'] = array_values($files);
-			$_Ar['status'] = 'success';
-		} else $_Ar = array('status' => 'error', 'content' => 'Directory '.$this->_dir.' not found.');
-	} else $_Ar = array('status' => 'disabled', 'content' => 'Sorry. Plagiarism checker only accepts C++ file.');
-		$this->checkLocal = $_Ar;
-	}
-
-	function getTeamInfo ($teamID) {
-		$query = "SELECT id,title FROM team WHERE id = ? limit 0,1";
-		$stmt = $this->conn->prepare($query);
-		$stmt->bindParam(1, $teamID);
-		$stmt->execute();
-		$row = $stmt->fetch(PDO::FETCH_ASSOC);
-		$this->title = $row['name'] = $row['title'];
-		$this->link = $this->tmLink.'/'.$row['id'];
-		return $row;
-	}
-	
-	function showDetection ($uNameAr = null) {
-		echo '<h3 class="toggle-opens">Comparison details </h3>
-		<div class="pair-compare toggles">';
-		foreach ($this->cont as $p => $content) {
+	function showDetection (array $compareAr, array $pair, bool $isEg) {
+if ($pair) {
+	if ($isEg) $si = '<span style="font-size:17px">(Should be <b>' . ( ($pair[2]) ? '<span class="text-success">true</span>' : '<span class="text-danger">false</span>' ) . '</b>)</span>';
+	else $si = '';
+	echo '<div class="pair" id="'.$pair[0].'-'.$pair[1].'">
+	<h3 class="toggle-opens">Pair '.$pair[0].' - '.$pair[1].' '.$si.'</h3>
+	<div class="pair-compair toggles">';
+	foreach ($pair as $k => $p) {
+		if ($k != 2) {
 //			$content = $txtAr[$p];
-//			echo nl2br($content);
-			$pAr[$p] = $pA = $this->make($content, 'cpp', 4, 4);
+			$fileName = 'data/'.$p.'.format.cpp';
+			$content = file_get_contents($fileName);
+			$pAr[$p] = $pA = $this->make($content, end(explode('.', $fileName)), 4, 4);
 			$wH = $pA['winnow']['hash'];
 			$wC = $pA['winnow']['char'];
 			$FPS = $FPSar[$p] = $pA['fingerprint'];
 
 			echo '<div class="col-lg-6 one">';
 
-			echo '<h3 id="p'.$p.'" class="ppd"><i>';
-			echo ($uNameAr[$p]) ? $uNameAr[$p] : '&nbsp;';
-			echo '</i></h3>';
+			echo '<h3 id="p'.$p.'" class="ppd"><i>p'.$p.'</i></h3>';
 			echo '<div class="compare-one">
 
-			<h4>Orginal</h4> <pre class="code"><code>'.($pA['original']).'</code></pre>';
-			echo '<h4>Formatted</h4> <pre class="beautify"></pre>';
+			<h4>Orginal</h4> <pre class="code"><code>'.htmlentities($pA['original']).'</code></pre>';
 			echo '<h4>Processed</h4> <pre class="toTokens"><span class="token">'.str_replace(' ', '</span> <span class="token">', htmlentities($pA['format'])).'</span></pre>';
 			
 			echo '<h4>Fingerprint</h4> <pre class="code"><code>';
 			print_r($FPS);
 			echo '</code></pre>';
 			
-			echo '<h4 class="toggle-open hash-tbl-open">Hash table</h4> 
+			echo '<h4 class="toggle-open hash-tbl-open">Hash table (only for display purpose, no neccessary for work)</h4> 
 			<div class="toggle hash-tbl">';
 			$l = 0;
 			foreach ($wH as $i => $wO) { // one winnow
 				$ii = $i + 1;
-				echo '<div class="line line-'.$i.'"><i class="lines-count" title="Line '.$ii.'">'.$ii.'</i>';
-				echo '<table class="tbl table-bordered">';
+				echo '<div class="line line-'.$i.'"><i title="Line '.$ii.'">'.$ii.'</i>';
+				echo '<table class="tbl table-bordered margin">';
 				foreach ($wO as $j => $wL) { // one winnow line
 					echo '<tr>';
 					foreach ($wL as $k => $v) { // one value
@@ -235,24 +97,26 @@ class Plagiarism extends Config {
 
 			echo '</div> <!-- .compare-one -->';
 			echo '</div> <!-- .col-lg-6 -->';
-		}
-		echo '<div class="clearfix"></div>';
+		} // end if k != 2
+	}
+	$FPSar = array_values($FPSar);
+	echo '<div class="clearfix"></div>';
 		$similar = $this->_array_intersect($FPSar[0], $FPSar[1]);
 		$perSi = round(count($similar)/count($FPSar[0])*100, 2);
 		$perSi2 = round(count($similar)/count($FPSar[1])*100, 2);
 		if ($perSi > $this->detectPer && $perSi2 > $this->detectPer) $detected = 'detected';
 		else $detected = 'safe';
 		$perSi = ($perSi > $perSi2) ? $perSi : $perSi2;
-		echo '<div class="similarity"><h4>Similarity</h4>
-		<div class="similarity-ar col-lg-8 no-padding"><pre><code>'; print_r($similar); echo '</code></pre></div>';
-		echo '<div class="col-lg-4 no-padding-right"><div class="detect '.$detected.'">'.$detected.' <span class="small">'.$perSi.'%</span></div></div>';
-		echo '</div> <!-- .similarity -->
-		<div class="clearfix"></div>';
-		echo '</div> <!-- .pair-compare -->';
+	echo '<div class="similarity"><h4>Similarity</h4>
+	<pre><code>'; print_r($similar); echo '</code></pre>';
+	echo '<div class="detect '.$detected.'">'.$detected.' <span class="small">'.$perSi.'%</span></div>';
+	echo '</div> <!-- .similarity -->
+	<div class="clearfix"></div>';
+	echo '</div> <!-- .pair-compair -->
+	</div> <!-- .pair -->';
+}
 	}
 
-	
-	
 	function _array_intersect ($haystack1 = array(), $haystack2 = array()) {
 		$haystack = array();
 		foreach ($haystack1 as $key1 => $value) {
@@ -281,8 +145,6 @@ class Plagiarism extends Config {
 			unset($_Ar[$line]);
 		}
 		$string = $str_merge;
-	//	foreach ($_Ar as $line => $string) {
-	//		$string = html_entity_decode($string);
 			$_ar = array_values(array_filter(explode(' ', $string), 'arFilter'));
 			$length = count($_ar);
 			$str = '';
@@ -353,6 +215,7 @@ class Plagiarism extends Config {
 */
 			$_fps = $FpsWi = array();
 			$wi = 0;
+//			print_r($Fps);
 			for ($i = 0; $i < $length; $i+=2) {
 				if ($Chars[$i+2]) {
 					$CharsWi[$wi] = array($Chars[$i], $Chars[$i+1], $Chars[$i+2], $Chars[$i+3]);
@@ -411,21 +274,16 @@ class Plagiarism extends Config {
 		$content = $cont = trim(preg_replace('/\n|\s+/', '', $content));
 
 		// Format content
-	//	$content = _format($content); // Called in tokenize function
+//		$content = $this->_format($content); // Called in tokenize function
 
 		// Tokenize
 		$tAr = $this->_tokens($content, $ext);
 		$content = $tAr['txt'];
 		$content = preg_replace('/{|}/', '', $content);
 		$content = str_replace("'", '"', $content);
-//		echo $content.'~~~~';
 
 		$H = $this->_hash($content, $kgram, $w);
-//		print_r($H);
-	//	$A = $H['all'];
 		$W = $H['winnow'];
-	//	$c = $A['char'];
-	//	$h = $A['hash'];
 		
 		return array (
 			'original' => $original_content,
@@ -436,25 +294,17 @@ class Plagiarism extends Config {
 		);
 	}
 
-	function _format ($content, $types) {
+	function _format ($content) {
+		$types = $this->tokens_CPP['types'];
 		// remove using namespace std;
 //		$content = str_replace('using namespace std;', '', $content);
 		
 		// Convert printf to cout
 		$content = htmlspecialchars_decode($content);
 		preg_match_all('/printf\("(.*?)",(.*?)\)/', $content, $matches);
-//		preg_match_all('/\((["])([^"]+)\1,(.*?)\)/', $content, $matches);
-//		print_r($matches);
-//		echo '<hr/>';
 		foreach ($matches[1] as $i => $m) {
 			if (isset($matches[2][$i])) $r = rtrim($matches[2][$i]);
 			else $r = '';
-/*			preg_match('/(.*?|\d)%((\.|\d)[0-9][a-z]{1})/', $matches[1][$i], $mat);
-			print_r($mat);
-			echo '<hr/>';
-			if (isset($mat[1]) && $mat[1]) $t = preg_replace('/(.*?|\d)%((\.|\d)[0-9][a-z]{1})/', "\"$1\">>{$r}", $matches[1][$i]);
-			else $t = preg_replace('/%((\.|\d)[0-9][a-z]{1})/', $r, $matches[1][$i]);
-*/
 			$t = $r;
 			$rp = 'cout<<'.$t;
 			$content = str_replace($matches[0][$i], $rp, $content);
@@ -462,8 +312,6 @@ class Plagiarism extends Config {
 
 		// Convert scanf to cin
 		preg_match_all('/scanf\("(.*?)",(.*?)\)/', $content, $matches);
-//		print_r($matches);
-//		echo '<hr/>';
 		foreach ($matches[1] as $i => $m) {
 			$spl1 = array_values(array_filter(preg_split('%', $matches[1][$i])));
 			$spl2 = array_values(array_filter(preg_split('/&|,/', $matches[2][$i])));
@@ -475,8 +323,6 @@ class Plagiarism extends Config {
 		// Convert float a, b to float a; float b
 		$types = str_replace(' ', '|', $types);
 		preg_match_all('/(float|int)(.*?)(float|int|\(|\;)/', $content, $matches);
-	//	$matches = split($types, $content);
-	//	print_r($matches);
 		$matches[1] = array_values(array_filter($matches[1]));
 		$matches[2] = array_values(array_filter($matches[2]));
 		foreach ($matches[2] as $i => $m) {
@@ -511,27 +357,6 @@ class Plagiarism extends Config {
 	}
 
 
-	function train ($fi, $fk) {
-		$_dir = $this->_dir;
-		if (is_dir($this->_dir)) {
-			$files = scandir($this->_dir);
-			foreach ($files as $fk => $fi) {
-				$file = $_dir.'/'.$fi;
-				$ext = end(explode('.', $fi));
-				if (!is_file($file) || strpos($fi, 'time') == true || $ext != 'cpp' || $ext != 'c') 
-					unset($files[$fk]);
-				else {
-					$content = file_get_contents($file);
-					$tokensAr = $this->_tokens($content, $ext);
-					$this->trainedData[] = array('file' => $file, 'content' => $content, 'data' => $tokensAr);
-				}
-			}
-			return $this->trainedData;
-		}
-		return false;
-	}
-	
-
 	function tokenize ($input, $tokens, $tokens_) {
 		global $varSar, $funcSar;
 		$tokensStr = implode(' ', $tokens);
@@ -539,7 +364,6 @@ class Plagiarism extends Config {
 		$input = html_entity_decode($input);
 		$inputA = trim(preg_replace('/\s+/', '', $input));
 		$_tokensAr['all'] = $tokensAr = preg_split("/({$tokensStr})/", $inputA, 0, PREG_SPLIT_NO_EMPTY|PREG_SPLIT_DELIM_CAPTURE);
-	//	print_r($tokensAr);
 
 		$tokAr = $func = $var = array();
 		foreach ($tokens_ as $toke) {
@@ -547,32 +371,15 @@ class Plagiarism extends Config {
 		}
 
 		$var_n = $func_n = -1;
-	//	print_r($funcSar);
 		foreach ($tokensAr as $k => $token) {
-	//		preg_match('/^((?![0-9]).)/', $token, $match);
 			preg_match('/^[0-9](.*)$/', $token, $match);
 			if (!preg_match('/^[0-9](.*)$/', $token) && !in_array($token, $tokAr)) {
-		/*		if ($token != 'include' && 
-					(	!isset($tokensAr[$k-2]) || 
-						$tokensAr[$k-2] != 'include'
-					) && 
-					(	!isset($tokensAr[$k-3]) || 
-						!in_array($tokensAr[$k-3], array('printf', 'cin', 'cout', 'scanf')) 
-					) && 
-					(	!isset($tokensAr[$k-4]) || 
-						(
-							$tokensAr[$k-1] != '%' &&
-							!in_array($tokensAr[$k-4], array('cin', 'scanf'))
-						) // scanf("%d")
-					) 
-				) { */
 					$tokensAr[$k] = '';
 					if (!isset($tokensAr[$k+1]) || $tokensAr[$k+1] != '(') {
 						if (!in_array($token, $var)) {
 							$var[] = $token;
 							$var_n++;
 						} else $var_n = array_search($token, $var);
-//						$tokensAr[$k] = $varSar[$var_n];
 						// change all to var
 						$tokensAr[$k] = 'var';
 					} else {
@@ -580,32 +387,13 @@ class Plagiarism extends Config {
 							$func[] = $token;
 							$func_n++;
 						} else $func_n = array_search($token, $func);
-//						$tokensAr[$k] = $funcSar[$func_n];
 						// change all to func
 						$tokensAr[$k] = 'func';
 					}
 			//	}
 			}
 		}
-	//	print_r($tokensAr);
-	//	print_r($func);
-
-/*		$remove = str_replace(' ', '|', $tokens['pattern'].' main');
-		unset($tokens['pattern']);
-		unset($tokens['math']);
-*/
-	//	$inputS = $input;
 		$inputS = implode(' ', $tokensAr);
-	//	$based = 'include if else';
-	//	$base = str_replace(' ', '', implode(' ', $tokens).' '.$based);
-	//	$bAr = implode(' ', $base);
-	//	$inputS = preg_replace("/[^\binclude\b]/i", ' dis ', $inputS);
-	//	echo $inputS;
-	//	$inputS = preg_replace("/{$remove}/", ' ', $inputS);
-	//	$inputS = preg_replace('/[^ \w]+/i', '', strtolower($inputS));
-
-	//	$inputS = preg_replace('!\s+!', ' ', $inputS);
-	//	$inputS = preg_replace('/(^\s+)|(\s+\S*$)/', '', $inputS);
 
 		$_tokensAr['txt'] = $inputS;
 		$_tokensAr['tokens'] = $tokensAr;
@@ -614,7 +402,7 @@ class Plagiarism extends Config {
 		return $_tokensAr;
 	}
 
-	function _tokens ($input, $_fLang) {
+	function _tokens ($input, $_fLang = 'cpp') {
 		if ($_fLang == 'cpp' || $_fLang == 'c') { // only accepts C++ (C) file
 			$tokens_ = $tokens = $this->tokens_CPP;
 			$tokens_['pattern'] = str_replace('\\', '', $this->tokens_CPP['pattern']);
